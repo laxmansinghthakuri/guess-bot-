@@ -9,7 +9,7 @@ from pymongo import MongoClient
 # Bot Configuration
 TOKEN = "8115321734:AAE6L_cxrunhb3rsv_oivFVoUQTCVrtLbrc"
 MONGO_URI = "mongodb+srv://shivva0560:Ch9WKTOcnaEbAMof@cluster0.sultr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-AUTHORIZED_USERS = [6442844937] [6806897901]  # Replace with authorized user IDs
+AUTHORIZED_USERS = ["6442844937", "6806897901"]  # Replace with authorized user IDs
 AUTHORIZED_GROUP_ID = -1002368559724  # Replace with your group ID
 
 # MongoDB setup
