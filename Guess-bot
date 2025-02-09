@@ -7,8 +7,8 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 from pymongo import MongoClient
 
 # Bot Configuration
-TOKEN = "YOUR_BOT_TOKEN"
-MONGO_URI = "YOUR_MANGO_URL"
+TOKEN = "8115321734:AAE6L_cxrunhb3rsv_oivFVoUQTCVrtLbrc"
+MONGO_URI = "mongodb+srv://shivva0560:Ch9WKTOcnaEbAMof@cluster0.sultr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 AUTHORIZED_USERS = [6442844937]  # Replace with authorized user IDs
 AUTHORIZED_GROUP_ID = -1002368559724  # Replace with your group ID
 
