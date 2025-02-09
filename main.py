@@ -3,7 +3,7 @@ import random
 import threading
 from datetime import datetime
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from pymongo import MongoClient
 
 # Bot Configuration
@@ -46,7 +46,7 @@ def transfer_bitcoin(user_id, amount):
             {"user_id": user_id, "bot": "seize", "Bitcoin": amount}
         )
 
-def start_game(update: Update, context: CallbackContext) -> None:
+async def start_game(update: Update, context: CallbackContext):
     """Start a new game with a random character."""
     global current_game, game_timer
 
@@ -54,7 +54,7 @@ def start_game(update: Update, context: CallbackContext) -> None:
         return
 
     if current_game:
-        update.message.reply_text("A game is already running. Wait for it to end.")
+        await update.message.reply_text("A game is already running. Wait for it to end.")
         return
 
     # Fetch random character from MongoDB
@@ -65,20 +65,20 @@ def start_game(update: Update, context: CallbackContext) -> None:
     }
 
     with open(character["image_path"], "rb") as photo:
-        update.message.reply_photo(photo, caption="Who is this Mysterious character? 🤔")
+        await update.message.reply_photo(photo, caption="Who is this mysterious character? 🤔")
 
     # Start a 20-second timer for game timeout
-    game_timer = threading.Timer(20, game_timeout, [context])
+    game_timer = threading.Timer(20, game_timeout, [context.application])
     game_timer.start()
 
-def game_timeout(context: CallbackContext) -> None:
+async def game_timeout(application: Application):
     """End the current game if no one guesses correctly."""
     global current_game
     if current_game:
-        context.bot.send_message(AUTHORIZED_GROUP_ID, "Time's up! No one guessed correctly.")
+        await application.bot.send_message(AUTHORIZED_GROUP_ID, "Time's up! No one guessed correctly.")
         current_game = None
 
-def check_guess(update: Update, context: CallbackContext) -> None:
+async def check_guess(update: Update, context: CallbackContext):
     """Check if the user's guess is correct."""
     global current_game, game_timer
 
@@ -103,7 +103,7 @@ def check_guess(update: Update, context: CallbackContext) -> None:
             {"$inc": {"correct_guesses": 1, "Bitcoin": 100}}
         )
 
-        update.message.reply_text(f"🎉 Correct! The character is {correct_name.replace('-', ' ').capitalize()}. You earned 100 Bitcoin!")
+        await update.message.reply_text(f"🎉 Correct! The character is {correct_name.replace('-', ' ').capitalize()}. You earned 100 Bitcoin!")
 
         # Transfer Bitcoin to @SeizeXhusbando_bot
         transfer_bitcoin(user_id, 100)
@@ -115,18 +115,18 @@ def check_guess(update: Update, context: CallbackContext) -> None:
     else:
         return  # Silent if the guess is incorrect
 
-def upload_character(update: Update, context: CallbackContext) -> None:
+async def upload_character(update: Update, context: CallbackContext):
     """Allow authorized users to upload a new character."""
     if update.message.from_user.id not in AUTHORIZED_USERS:
-        update.message.reply_text("You are not authorized to use this command.")
+        await update.message.reply_text("You are not authorized to use this command.")
         return
 
     if not update.message.reply_to_message or not update.message.reply_to_message.photo:
-        update.message.reply_text("You must reply to an image with the character's name. Format: /upload <character_name>")
+        await update.message.reply_text("You must reply to an image with the character's name. Format: /upload <character_name>")
         return
 
     if not context.args or len(context.args) < 1:
-        update.message.reply_text("Usage: /upload <character_name>")
+        await update.message.reply_text("Usage: /upload <character_name>")
         return
 
     character_name = context.args[0].lower()
@@ -134,23 +134,23 @@ def upload_character(update: Update, context: CallbackContext) -> None:
     file_path = f"images/{character_name}.jpg"
 
     # Download and save the image
-    photo.get_file().download(file_path)
+    await photo.get_file().download_to_drive(file_path)
 
     # Save character to MongoDB
     characters_collection.insert_one({"name": character_name, "image_path": file_path})
-    update.message.reply_text(f"Character '{character_name.replace('-', ' ').capitalize()}' has been uploaded successfully!")
+    await update.message.reply_text(f"Character '{character_name.replace('-', ' ').capitalize()}' has been uploaded successfully!")
 
-def main() -> None:
+def main():
     """Start the bot."""
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+    application = Application.builder().token(TOKEN).build()
 
-    dp.add_handler(CommandHandler("guess", start_game))
-    dp.add_handler(CommandHandler("upload", upload_character))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, check_guess))
+    # Command handlers
+    application.add_handler(CommandHandler("guess", start_game))
+    application.add_handler(CommandHandler("upload", upload_character))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_guess))
 
-    updater.start_polling()
-    updater.idle()
+    # Start the bot
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
